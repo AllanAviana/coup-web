@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coup Web</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="login-screen" class="screen active">
+        <div class="login-box">
+            <h1>Coup Web</h1>
+            <p>Digite seu nome (Allan, Daniel ou Gustavo):</p>
+            <input type="text" id="username" placeholder="Nome de Usuário" />
+            <button onclick="login()">Entrar na Sala</button>
+            <p id="login-error" class="error"></p>
+        </div>
+    </div>
+
+    <div id="lobby-screen" class="screen">
+        <div class="lobby-box">
+            <h1>Sala de Espera</h1>
+            <p>Aguardando os outros jogadores...</p>
+            <ul id="player-list"></ul>
+            <button id="btn-start" onclick="startGame()">Começar Jogo</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="game-container">
+            <div class="left-panel">
+                <h2>Log da Partida</h2>
+                <div id="game-log"></div>
+            </div>
+
+            <div class="main-panel">
+                <div id="game-status" class="status-bar">Aguardando...</div>
+                
+                <div class="opponents" id="opponents-area">
+                    <!-- Oponentes renderizados aqui via JS -->
+                </div>
+
+                <div class="my-area">
+                    <div class="my-info">
+                        <h2>Minha Área (<span id="my-name-display"></span>)</h2>
+                        <p class="coins">Moedas: <span id="my-coins">0</span></p>
+                    </div>
+
+                    <div class="my-cards" id="my-cards-container">
+                        <!-- Cartas renderizadas aqui -->
+                    </div>
+
+                    <div class="actions-panel" id="actions-panel">
+                        <h3>Minhas Ações</h3>
+                        <div class="action-buttons">
+                            <button onclick="playAction('income', null)">Renda (1 moeda)</button>
+                            <button class="btn-duque" onclick="playAction('duke', null)">Duque (Pega 3)</button>
+                            <div class="action-group">
+                                <button class="btn-capitao" onclick="playAction('captain')">Capitão (Rouba 2)</button>
+                                <select id="target-captain"></select>
+                            </div>
+                            <div class="action-group">
+                                <button class="btn-assassino" onclick="playAction('assassin')">Assassino (Paga 3 - Elimina)</button>
+                                <select id="target-assassin"></select>
+                            </div>
+                            <button class="btn-embaixador" onclick="playAction('ambassador', null)">Embaixador (Troca cartas)</button>
+                        </div>
+                    </div>
+
+                    <div id="reaction-panel" class="reaction-panel hidden">
+                        <h3>Reação à Jogada</h3>
+                        <p id="reaction-text"></p>
+                        <div class="reaction-buttons" id="reaction-buttons"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
