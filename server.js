@@ -27,7 +27,7 @@ let pendingAction = null;
 //   actionName: string, // 'duke', 'assassin', etc
 //   player: string, // quem está jogando/bloqueando
 //   target: string | null, // alvo da ação
-//   passCount: 0,
+//   passers: [], // Array de IDs que passaram a jogada
 //   doubters: []
 // }
 
@@ -241,7 +241,7 @@ io.on('connection', (socket) => {
             actionName,
             player: currentUser,
             target,
-            passCount: 0
+            passers: []
         };
 
         logToAll(`${currentUser} declarou ação de ${character}${target ? ' contra ' + target : ''}.`);
@@ -250,6 +250,7 @@ io.on('connection', (socket) => {
 
     socket.on('doubt', () => {
         if (!pendingAction || pendingAction.player === currentUser || !players[currentUser].isAlive) return;
+        if (pendingLoss || pendingExchange) return; // Não pode duvidar de algo que já está em processo de resolução
 
         logToAll(`${currentUser} duvidou de ${pendingAction.player}!`);
         
@@ -301,6 +302,7 @@ io.on('connection', (socket) => {
     socket.on('block', (data) => {
         // Ex: Bloquear assassino com Condessa
         if (!pendingAction || pendingAction.type !== 'action') return;
+        if (pendingLoss || pendingExchange) return; // Não pode bloquear uma vez que a resolução já começou
         const { blockChar } = data; // 'Condessa', 'Capitão' etc
 
         if (pendingAction.actionName === 'assassin' && pendingAction.target === currentUser && blockChar === 'Condessa') {
@@ -312,7 +314,7 @@ io.on('connection', (socket) => {
                 actionName: 'block_assassin',
                 player: currentUser,
                 target: originalAction.player,
-                passCount: 0
+                passers: []
             };
             broadcastState();
         } else if (pendingAction.actionName === 'captain' && pendingAction.target === currentUser && (blockChar === 'Capitão' || blockChar === 'Embaixador')) {
@@ -324,7 +326,7 @@ io.on('connection', (socket) => {
                 actionName: 'block_captain',
                 player: currentUser,
                 target: originalAction.player,
-                passCount: 0
+                passers: []
             };
             broadcastState();
         }
@@ -332,16 +334,24 @@ io.on('connection', (socket) => {
 
     socket.on('pass', () => {
         if (!pendingAction || pendingAction.player === currentUser || !players[currentUser].isAlive) return;
-
-        pendingAction.passCount++;
+        if (pendingLoss || pendingExchange) return; // Já está sob resolução, ignorar passes
+        
+        // Evita spam de pass
+        if (pendingAction.passers.includes(currentUser)) return;
+        
+        pendingAction.passers.push(currentUser);
         let aliveOthers = turnOrder.filter(p => players[p].isAlive && p !== pendingAction.player).length;
 
-        // Se o alvo não bloqueou e passou (ou todos passaram se for ação global)
-        if (pendingAction.passCount >= aliveOthers) {
-            if (pendingAction.type === 'action') {
-                executeAction(pendingAction);
-            } else if (pendingAction.type === 'block') {
-                logToAll(`Bloqueio de ${pendingAction.player} não foi contestado.`);
+        // Se o número de passes for igual ao número de atacantes / duvidadores
+        if (pendingAction.passers.length >= aliveOthers) {
+            let actionToResolve = pendingAction;
+            // Limpa imediatamente antes de executar para evitar reentrância
+            pendingAction = null; 
+
+            if (actionToResolve.type === 'action') {
+                executeAction(actionToResolve);
+            } else if (actionToResolve.type === 'block') {
+                logToAll(`Bloqueio de ${actionToResolve.player} não foi contestado.`);
                 nextTurn(); // Ação original cancelada
             }
         } else {
